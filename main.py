@@ -4,6 +4,8 @@ import random
 import string
 from employee import Employee
 from database import create_table, get_connection
+from create_data import faker_person_create
+
 
 @click.command()
 @click.argument('mode')
@@ -42,7 +44,15 @@ def main(mode, additional_args):
                 print(result_string)
 
     elif mode == '4':
-        ...
+        with get_connection() as conn:
+            for _ in range(1000000):
+                emp = Employee(
+                    faker_person_create()['full_name'],
+                    faker_person_create()['birthdate'],
+                    faker_person_create()['gender']
+                )
+                emp.save_to_db(conn)
+            
 
 
 if __name__ == '__main__':
