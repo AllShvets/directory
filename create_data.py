@@ -29,3 +29,27 @@ def faker_person_create():
     ]
 
     return dict_person
+
+
+def generate_name_starting_with_F():
+    last_name = translit(
+        'Ф' + faker.last_name_male()[1:],
+        language_code='ru',
+        reversed=True
+    )
+    first_name = translit(
+        faker.first_name_male(),
+        language_code='ru',
+        reversed=True
+    )
+    patronymic = translit(
+        faker.first_name_male() + 'ович',
+        language_code='ru',
+        reversed=True
+    )
+    full_name = last_name + ' ' + first_name + ' ' + patronymic
+
+    list_person = [full_name, generate_age(), 'Male']
+    return list_person
+
+print(generate_name_starting_with_F())

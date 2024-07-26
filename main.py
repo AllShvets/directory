@@ -4,7 +4,8 @@ import random
 import string
 from employee import Employee
 from database import create_table, get_connection
-from create_data import faker_person_create
+from create_data import faker_person_create, generate_name_starting_with_F
+import time
 
 
 @click.command()
@@ -47,15 +48,40 @@ def main(mode, additional_args):
         data_package = []
         with get_connection() as conn:
             cursor = conn.cursor()
+
+            # Начинаем транзакцию
+            cursor.execute("BEGIN TRANSACTION;")
+
             query = "INSERT INTO employees (full_name, birthdate, gender) VALUES (?, ?, ?)"
             for _ in range(1000000):
                 data_package.append(tuple(faker_person_create()))
-                if len(data_package) >= 10000:  # Вставка батчами по 10,000 записей
+                if len(data_package) >= 10000:
                     cursor.executemany(query, data_package)
-                    data_package.clear()  # Очистка списка для следующего батча
-            # Вставляем оставшиеся данные
+                    data_package.clear()
+
             if data_package:
                 cursor.executemany(query, data_package)
+
+            data_package_with_F = [tuple(generate_name_starting_with_F()) for _ in range(100)]
+            cursor.executemany(query, data_package_with_F)
+
+            cursor.execute("COMMIT;")
+            print('В таблицу успешно добавлено 1000100 новых записей')
+
+    elif mode == '5':
+        start_time = time.time()
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            rows = cursor.execute("SELECT full_name, birthdate, gender FROM employees WHERE gender='Male' AND full_name LIKE 'F%'").fetchall()
+            for row in rows:
+                emp_age = Employee(row[0], row[1], row[2]).calculate_age()
+                print(f"{row[0]}, {row[1]}, {row[2]}, {emp_age}")
+        end_time = time.time()
+        print(f"Execution time: {end_time - start_time:.4f} seconds")
+    
+
+    elif mode == '6':
+        ...
 
 
 
