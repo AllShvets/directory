@@ -44,15 +44,19 @@ def main(mode, additional_args):
                 print(result_string)
 
     elif mode == '4':
+        data_package = []
         with get_connection() as conn:
+            cursor = conn.cursor()
+            query = "INSERT INTO employees (full_name, birthdate, gender) VALUES (?, ?, ?)"
             for _ in range(1000000):
-                emp = Employee(
-                    faker_person_create()['full_name'],
-                    faker_person_create()['birthdate'],
-                    faker_person_create()['gender']
-                )
-                emp.save_to_db(conn)
-            
+                data_package.append(tuple(faker_person_create()))
+                if len(data_package) >= 10000:  # Вставка батчами по 10,000 записей
+                    cursor.executemany(query, data_package)
+                    data_package.clear()  # Очистка списка для следующего батча
+            # Вставляем оставшиеся данные
+            if data_package:
+                cursor.executemany(query, data_package)
+
 
 
 if __name__ == '__main__':

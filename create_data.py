@@ -22,13 +22,10 @@ def faker_person_create():
     else:
         gender = 'Male'
 
-    dict_person = {
-        'full_name': name_f,
-        'birthdate': b_date,
-        'gender': gender
-    }
+    dict_person = [
+        name_f,
+        b_date,
+        gender
+    ]
 
     return dict_person
-
-
-print(faker_person_create())
