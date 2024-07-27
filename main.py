@@ -1,7 +1,4 @@
-import sys
 import click
-import random
-import string
 from employee import Employee
 from database import create_table, get_connection
 from create_data import faker_person_create, generate_name_starting_with_F
@@ -49,11 +46,10 @@ def main(mode, additional_args):
         with get_connection() as conn:
             cursor = conn.cursor()
 
-            # Начинаем транзакцию
             cursor.execute("BEGIN TRANSACTION;")
 
             query = "INSERT INTO employees (full_name, birthdate, gender) VALUES (?, ?, ?)"
-            for _ in range(1000000):
+            for _ in range(10000000):
                 data_package.append(tuple(faker_person_create()))
                 if len(data_package) >= 10000:
                     cursor.executemany(query, data_package)
@@ -66,23 +62,30 @@ def main(mode, additional_args):
             cursor.executemany(query, data_package_with_F)
 
             cursor.execute("COMMIT;")
-            print('В таблицу успешно добавлено 1000100 новых записей')
+            print('В таблицу успешно добавлено 1000100 новых записей.')
 
     elif mode == '5':
         start_time = time.time()
         with get_connection() as conn:
             cursor = conn.cursor()
-            rows = cursor.execute("SELECT full_name, birthdate, gender FROM employees WHERE gender='Male' AND full_name LIKE 'F%'").fetchall()
+            rows = cursor.execute('''SELECT full_name, birthdate,
+                                    gender FROM employees
+                                    WHERE gender='Male'
+                                    AND full_name LIKE "F%"''').fetchall()
             for row in rows:
                 emp_age = Employee(row[0], row[1], row[2]).calculate_age()
                 print(f"{row[0]}, {row[1]}, {row[2]}, {emp_age}")
         end_time = time.time()
         print(f"Execution time: {end_time - start_time:.4f} seconds")
-    
 
     elif mode == '6':
-        ...
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("CREATE INDEX idx_gender ON employees(gender);")
 
+            conn.commit()
+
+        print("Оптимизация прошла успешно.")
 
 
 if __name__ == '__main__':

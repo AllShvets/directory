@@ -51,5 +51,3 @@ def generate_name_starting_with_F():
 
     list_person = [full_name, generate_age(), 'Male']
     return list_person
-
-print(generate_name_starting_with_F())
