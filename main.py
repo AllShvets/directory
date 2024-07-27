@@ -1,7 +1,7 @@
 import click
 from employee import Employee
-from database import create_table, get_connection
-from create_data import faker_person_create, generate_name_starting_with_F
+from database import Database
+from create_data import Data
 import time
 
 
@@ -9,29 +9,35 @@ import time
 @click.argument('mode')
 @click.argument('additional_args', nargs=-1)
 def main(mode, additional_args):
+    database_instance = Database()
     if mode == '1':
-        create_table()
+        data_instance = Database()
+        data_instance.create_table()
         print('Таблица employees создана.')
 
     elif mode == '2':
+        database_instance = Database()
         if len(additional_args) != 3:
             print('Пожалуйста, введите ФИО, дату рождения и пол')
+            return
+
         emp = Employee(
             additional_args[0],
             additional_args[1],
             additional_args[2]
         )
-        with get_connection() as conn:
+        with database_instance.get_connection() as conn:
             emp.save_to_db(conn)
         print(f'Сотрудник {emp.full_name} добавлен в таблицу.')
 
     elif mode == '3':
         query = '''
-        SELECT full_name, birthdate, gender
+        SELECT
+        DISTINCT full_name, birthdate, gender
         FROM employees
-        GROUP BY full_name
+        ORDER BY full_name
         '''
-        with get_connection() as conn:
+        with database_instance.get_connection() as conn:
             cursor = conn.cursor()
             rows = cursor.execute(query).fetchall()
             for row in rows:
@@ -43,14 +49,14 @@ def main(mode, additional_args):
 
     elif mode == '4':
         data_package = []
-        with get_connection() as conn:
+        with database_instance.get_connection() as conn:
             cursor = conn.cursor()
-
             cursor.execute("BEGIN TRANSACTION;")
 
             query = "INSERT INTO employees (full_name, birthdate, gender) VALUES (?, ?, ?)"
-            for _ in range(10000000):
-                data_package.append(tuple(faker_person_create()))
+            for _ in range(1000000):
+                data_instance = Data()
+                data_package.append(tuple(data_instance.faker_person_create())) 
                 if len(data_package) >= 10000:
                     cursor.executemany(query, data_package)
                     data_package.clear()
@@ -58,7 +64,8 @@ def main(mode, additional_args):
             if data_package:
                 cursor.executemany(query, data_package)
 
-            data_package_with_F = [tuple(generate_name_starting_with_F()) for _ in range(100)]
+            data_instance = Data()
+            data_package_with_F = [tuple(data_instance.generate_name_starting_with_F()) for _ in range(100)]
             cursor.executemany(query, data_package_with_F)
 
             cursor.execute("COMMIT;")
@@ -66,23 +73,22 @@ def main(mode, additional_args):
 
     elif mode == '5':
         start_time = time.time()
-        with get_connection() as conn:
+        with database_instance.get_connection() as conn:
             cursor = conn.cursor()
             rows = cursor.execute('''SELECT full_name, birthdate,
                                     gender FROM employees
                                     WHERE gender='Male'
-                                    AND full_name LIKE "F%"''').fetchall()
+                                    AND full_name LIKE 'F%' ''').fetchall()
             for row in rows:
                 emp_age = Employee(row[0], row[1], row[2]).calculate_age()
                 print(f"{row[0]}, {row[1]}, {row[2]}, {emp_age}")
         end_time = time.time()
-        print(f"Execution time: {end_time - start_time:.4f} seconds")
+        print(f"Время выполнения: {end_time - start_time:.4f} секунд")
 
     elif mode == '6':
-        with get_connection() as conn:
+        with database_instance.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("CREATE INDEX idx_gender ON employees(gender);")
-
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_fullname_gender ON employees(full_name, gender);")
             conn.commit()
 
         print("Оптимизация прошла успешно.")
